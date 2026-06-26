@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Assistant - Smart Learning Tool</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<aside class="sidebar">
+  <div class="sidebar-header"><h2>Study Assistant</h2><p>Smart Learning Platform</p></div>
+  <div class="sidebar-actions"><button class="btn-add" id="btnAddProject">+ New Project</button></div>
+  <div class="project-list" id="projectList"></div>
+</aside>
+<div class="main">
+  <div class="topbar">
+    <h1 id="projectTitle">Study Assistant</h1>
+    <div class="update-hint" id="updateHint" style="display:none;"></div>
+    <button class="btn-update" id="btnUpdate">Update</button>
+  </div>
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="content">Learning Content</button>
+    <button class="tab-btn" data-tab="qa">Q&amp;A</button>
+    <button class="tab-btn" data-tab="feynman">Feynman Method</button>
+    <button class="tab-btn" data-tab="logs">Learning Log</button>
+  </div>
+  <div class="content" id="contentArea">
+    <div class="empty-state"><div class="big-icon">&#x1F4DA;</div><h3>Welcome to Study Assistant</h3><p>Click "New Project" to import learning materials.</p></div>
+  </div>
+</div>
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h3>Import Learning Project</h3>
+    <div class="modal-tabs">
+      <button class="modal-tab active" data-tab="file">File Upload</button>
+      <button class="modal-tab" data-tab="git">Git Repo</button>
+      <button class="modal-tab" data-tab="concept">Concept</button>
+    </div>
+    <div class="modal-panel active" id="panel-file">
+      <div class="form-group"><label>Project Name</label><input type="text" id="fileName" placeholder="Optional, uses filename if empty"></div>
+      <div class="file-drop" id="fileDrop"><p>Click or drag file here</p><p style="font-size:0.78rem;margin-top:4px;">Supports: PDF, DOCX, TXT, images, code files</p></div>
+      <input type="file" id="fileInput" style="display:none;">
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeImportModal()">Cancel</button></div>
+    </div>
+    <div class="modal-panel" id="panel-git">
+      <div class="form-group"><label>Git Repository URL</label><input type="text" id="gitUrl" placeholder="https://github.com/user/repo.git"></div>
+      <div class="form-group"><label>Project Name (optional)</label><input type="text" id="gitName" placeholder="Auto-detected if empty"></div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeImportModal()">Cancel</button><button class="btn-primary" id="btnImportGit">Import</button></div>
+    </div>
+    <div class="modal-panel" id="panel-concept">
+      <div class="form-group"><label>Concept / Topic</label><textarea id="conceptText" placeholder="Enter a concept to learn, e.g.: RAG"></textarea></div>
+      <div class="form-group"><label>Project Name (optional)</label><input type="text" id="conceptName" placeholder="Uses first 50 chars if empty"></div>
+      <div class="modal-actions"><button class="btn-secondary" onclick="closeImportModal()">Cancel</button><button class="btn-primary" id="btnImportConcept">Import</button></div>
+    </div>
+  </div>
+</div>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
