@@ -1,6 +1,7 @@
 """学习内容 API 路由"""
 from fastapi import APIRouter, HTTPException
 from backend.services.learning_service import (
+    get_pipeline_progress,
     start_learning, get_learning_content, get_project_status, update_learning_content,
 )
 
@@ -36,6 +37,15 @@ async def get_content(project_id: str):
         return {"content": content}
     except Exception as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/{project_id}/progress")
+async def get_progress(project_id: str):
+    """Get learning pipeline progress"""
+    try:
+        return get_pipeline_progress(project_id)
+    except Exception as e:
+        return {"stage": "unknown", "progress": 0}
 
 
 @router.post("/{project_id}/update")

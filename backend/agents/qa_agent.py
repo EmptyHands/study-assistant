@@ -78,3 +78,33 @@ class QAAgent(BaseAgent):
         except Exception as e:
             logger.error(f"问答失败: {e}")
             return {"answer": f"抱歉，回答生成失败: {e}", "source_type": "none"}
+
+
+    async def stream_answer(self, question: str, summary: str, project_id: str):
+        """Stream answer chunks for SSE"""
+        import asyncio, json
+        from backend.core.vector_store import get_vector_store
+        from backend.utils.web_search import web_search
+        
+        yield {"type": "status", "text": "Thinking..."}
+        
+        try:
+            # Get full answer
+            answer = await self.run({
+                "question": question,
+                "summary": summary,
+                "project_id": project_id,
+            })
+            full_text = answer.get("answer", "Sorry, I could not answer that.")
+            
+            # Stream text in chunks
+            words = full_text.split()
+            chunk_size = 5
+            for i in range(0, len(words), chunk_size):
+                chunk = " ".join(words[i:i+chunk_size])
+                yield {"type": "chunk", "text": chunk + " "}
+                await asyncio.sleep(0.05)
+            
+            yield {"type": "done", "source_type": answer.get("source_type", "summary")}
+        except Exception as e:
+            yield {"type": "error", "text": str(e)}

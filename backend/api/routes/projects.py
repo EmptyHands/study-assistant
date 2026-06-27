@@ -2,6 +2,7 @@
 import os
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 from backend.services.project_service import (
     create_project, get_project, list_projects, update_project,
     delete_project, save_uploaded_file, get_project_with_content,
@@ -13,12 +14,12 @@ router = APIRouter()
 
 class GitImportRequest(BaseModel):
     git_url: str
-    name: str = None
+    name: Optional[str] = None
 
 
 class ConceptImportRequest(BaseModel):
     concept: str
-    name: str = None
+    name: Optional[str] = None
 
 
 class RenameRequest(BaseModel):

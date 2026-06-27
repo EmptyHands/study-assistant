@@ -3,57 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Assistant - Smart Learning Tool</title>
+<title>Study Assistant</title>
 <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-<aside class="sidebar">
-  <div class="sidebar-header"><h2>Study Assistant</h2><p>Smart Learning Platform</p></div>
-  <div class="sidebar-actions"><button class="btn-add" id="btnAddProject">+ New Project</button></div>
-  <div class="project-list" id="projectList"></div>
+
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo-icon">&#x25C8;</div>
+    <h2>Study Assistant</h2>
+    <p>AI-Powered Learning</p>
+  </div>
+  <div class="sidebar-actions">
+    <button class="btn-new-project" id="btnNewProject">
+      <span class="plus">+</span> New Project
+    </button>
+  </div>
+  <nav class="project-list" id="projectList">
+    <div class="project-list-empty">No projects yet.<br>Click + to import one.</div>
+  </nav>
+  <div class="sidebar-footer">
+    <span class="status-dot-live"></span>
+    <span id="connectionStatus">Ready</span>
+  </div>
 </aside>
-<div class="main">
-  <div class="topbar">
-    <h1 id="projectTitle">Study Assistant</h1>
-    <div class="update-hint" id="updateHint" style="display:none;"></div>
-    <button class="btn-update" id="btnUpdate">Update</button>
+
+<main class="main-area">
+  <header class="topbar">
+    <h1 id="projectTitle">Welcome</h1>
+    <div class="topbar-right">
+      <span class="update-nudge" id="updateNudge" style="display:none;"></span>
+      <button class="btn-update" id="btnUpdate" disabled>&#8635; Update</button>
+    </div>
+  </header>
+
+  <nav class="tab-bar">
+    <button class="tab active" data-tab="content"><span class="tab-icon">&#x1F4D6;</span> Content</button>
+    <button class="tab" data-tab="qa"><span class="tab-icon">&#x1F4AC;</span> Q&A</button>
+    <button class="tab" data-tab="feynman"><span class="tab-icon">&#x1F9E0;</span> Feynman</button>
+    <button class="tab" data-tab="logs"><span class="tab-icon">&#x1F4C8;</span> Log</button>
+  </nav>
+
+  <div class="content-area" id="contentArea">
+    <div class="welcome-state">
+      <div class="welcome-icon">&#x25C8;</div>
+      <h2>Welcome to Study Assistant</h2>
+      <p>Import a PDF, Git repository, or type a concept to begin.</p>
+    </div>
   </div>
-  <div class="tabs">
-    <button class="tab-btn active" data-tab="content">Learning Content</button>
-    <button class="tab-btn" data-tab="qa">Q&amp;A</button>
-    <button class="tab-btn" data-tab="feynman">Feynman Method</button>
-    <button class="tab-btn" data-tab="logs">Learning Log</button>
-  </div>
-  <div class="content" id="contentArea">
-    <div class="empty-state"><div class="big-icon">&#x1F4DA;</div><h3>Welcome to Study Assistant</h3><p>Click "New Project" to import learning materials.</p></div>
-  </div>
-</div>
+</main>
+
 <div class="modal-overlay" id="importModal">
-  <div class="modal">
-    <h3>Import Learning Project</h3>
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Import Learning Project</h3>
+      <button class="modal-close" id="btnModalClose">&times;</button>
+    </div>
     <div class="modal-tabs">
-      <button class="modal-tab active" data-tab="file">File Upload</button>
-      <button class="modal-tab" data-tab="git">Git Repo</button>
-      <button class="modal-tab" data-tab="concept">Concept</button>
+      <button class="modal-tab active" data-mtab="file">&#x1F4C1; File</button>
+      <button class="modal-tab" data-mtab="git">&#x1F5C4; Git</button>
+      <button class="modal-tab" data-mtab="concept">&#x1F4A1; Concept</button>
     </div>
     <div class="modal-panel active" id="panel-file">
-      <div class="form-group"><label>Project Name</label><input type="text" id="fileName" placeholder="Optional, uses filename if empty"></div>
-      <div class="file-drop" id="fileDrop"><p>Click or drag file here</p><p style="font-size:0.78rem;margin-top:4px;">Supports: PDF, DOCX, TXT, images, code files</p></div>
-      <input type="file" id="fileInput" style="display:none;">
-      <div class="modal-actions"><button class="btn-secondary" onclick="closeImportModal()">Cancel</button></div>
+      <div class="field"><label>Project Name <small>(optional)</small></label><input type="text" id="fileName" placeholder="Uses filename if empty"></div>
+      <div class="drop-zone" id="dropZone"><div class="drop-icon">&#x1F4E4;</div><p>Click or drag file here</p><small>PDF, DOCX, TXT, images, code</small></div>
+      <input type="file" id="fileInput" hidden>
     </div>
     <div class="modal-panel" id="panel-git">
-      <div class="form-group"><label>Git Repository URL</label><input type="text" id="gitUrl" placeholder="https://github.com/user/repo.git"></div>
-      <div class="form-group"><label>Project Name (optional)</label><input type="text" id="gitName" placeholder="Auto-detected if empty"></div>
-      <div class="modal-actions"><button class="btn-secondary" onclick="closeImportModal()">Cancel</button><button class="btn-primary" id="btnImportGit">Import</button></div>
+      <div class="field"><label>Repository URL</label><input type="text" id="gitUrl" placeholder="https://github.com/user/repo.git"></div>
+      <div class="field"><label>Project Name <small>(optional)</small></label><input type="text" id="gitName" placeholder="Auto-detected"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnCancelGit">Cancel</button>
+        <button class="btn-primary" id="btnImportGit">Import</button>
+      </div>
     </div>
     <div class="modal-panel" id="panel-concept">
-      <div class="form-group"><label>Concept / Topic</label><textarea id="conceptText" placeholder="Enter a concept to learn, e.g.: RAG"></textarea></div>
-      <div class="form-group"><label>Project Name (optional)</label><input type="text" id="conceptName" placeholder="Uses first 50 chars if empty"></div>
-      <div class="modal-actions"><button class="btn-secondary" onclick="closeImportModal()">Cancel</button><button class="btn-primary" id="btnImportConcept">Import</button></div>
+      <div class="field"><label>Topic / Concept</label><textarea id="conceptText" rows="4" placeholder="Describe a concept to learn..."></textarea></div>
+      <div class="field"><label>Project Name <small>(optional)</small></label><input type="text" id="conceptName" placeholder="Auto-generated"></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="btnCancelConcept">Cancel</button>
+        <button class="btn-primary" id="btnImportConcept">Import</button>
+      </div>
     </div>
   </div>
 </div>
+
 <script src="/static/js/app.js"></script>
 </body>
 </html>

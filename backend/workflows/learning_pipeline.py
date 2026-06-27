@@ -1,6 +1,7 @@
 """LangGraph 学习流程 Pipeline"""
 import logging
 from typing import Literal
+from backend.core.progress import set_progress as _sp
 from langgraph.graph import StateGraph, END
 from .states import LearningState
 
@@ -17,7 +18,7 @@ async def parse_content(state: LearningState) -> dict:
     source_path = state.get("source_path", "")
 
     if source_type == "concept":
-        return {"raw_content": source_path, "title": source_path[:100]}
+        _sp(state.get("project_id",""), "parsing", 20); return {"raw_content": source_path, "title": source_path[:100]}
 
     if source_type == "git":
         result = clone_repo(source_path)
@@ -45,6 +46,7 @@ async def learnability_check(state: LearningState) -> dict:
         "raw_content": state.get("raw_content", ""),
         "source_type": state.get("source_type", "file"),
     })
+    _sp(state.get("project_id",""), "checking", 35);
     return {
         "is_learnable": result["is_learnable"],
         "learnability_reason": result["reason"],
@@ -68,6 +70,7 @@ async def framework_analysis(state: LearningState) -> dict:
         "content_type": state.get("content_type", ""),
         "title": state.get("title", ""),
     })
+    _sp(state.get("project_id",""), "framework", 50);
     return {"framework": result.get("framework", {})}
 
 
@@ -79,12 +82,14 @@ async def content_explanation(state: LearningState) -> dict:
         "raw_content": state.get("raw_content", ""),
         "framework": state.get("framework", {}),
     })
+    _sp(state.get("project_id",""), "explaining", 70);
     return {"explanation": result.get("explanation", {}),
             "title": result.get("title") or state.get("title", "")}
 
 
 async def save_learning_content(state: LearningState) -> dict:
     """Step 4: 保存学习内容到数据库和向量库"""
+    _sp(state.get("project_id",""), "saving", 85);
     from backend.core.database import get_db_session
     from backend.models.database import Project, LearningContent
     from backend.core.vector_store import get_vector_store
@@ -153,6 +158,7 @@ def _chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[s
 
 async def end_not_learnable(state: LearningState) -> dict:
     """不可学习时的结束节点"""
+    _sp(state.get("project_id",""), "saving", 85);
     from backend.core.database import get_db_session
     from backend.models.database import Project
 

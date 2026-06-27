@@ -5,24 +5,19 @@ from backend.services.qa_service import ask_question, get_qa_history
 
 router = APIRouter()
 
-
 class AskRequest(BaseModel):
     question: str
 
-
 @router.post("/{project_id}/ask")
 async def ask(project_id: str, req: AskRequest):
-    """提交问题"""
     try:
         result = await ask_question(project_id, req.question)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @router.get("/{project_id}/history")
 async def history(project_id: str, limit: int = 50):
-    """获取问答历史"""
     try:
         records = get_qa_history(project_id, limit)
         return {"records": records}

@@ -124,7 +124,7 @@ def get_project_with_content(project_id: str) -> dict:
                 "id": project.learning_content.id,
                 "title": project.learning_content.title,
                 "framework": project.learning_content.framework_json,
-                "explanation": project.learning_content.sq3r_json,
+                "sq3r": project.learning_content.sq3r_json,
                 "created_at": str(project.learning_content.created_at),
                 "updated_at": str(project.learning_content.updated_at),
             }

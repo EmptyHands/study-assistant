@@ -75,3 +75,26 @@ def get_qa_history(project_id: str, limit: int = 50) -> list[dict]:
         ]
     finally:
         db.close()
+
+
+async def stream_answer(project_id: str, question: str):
+    """流式回答 - 逐token返回"""
+    from backend.agents.qa_agent import QAAgent
+    from backend.core.database import get_db_session
+    from backend.models.database import LearningContent
+    import json
+    
+    db = get_db_session()
+    try:
+        content = db.query(LearningContent).filter(LearningContent.project_id == project_id).first()
+        summary = json.dumps(content.sq3r_json, ensure_ascii=False)[:3000] if content and content.sq3r_json else ""
+    finally:
+        db.close()
+    
+    agent = QAAgent()
+    async for token in agent.stream_answer(
+        question=question,
+        summary=summary,
+        project_id=project_id,
+    ):
+        yield token
