@@ -5,7 +5,11 @@ from typing import Optional
 from dataclasses import dataclass, field
 from enum import Enum
 import os
+from pathlib import Path
 from dotenv import load_dotenv
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+_DEFAULT_DB = str(_PROJECT_ROOT / "data" / "study_assistant.db")
 
 load_dotenv()
 
@@ -69,7 +73,7 @@ class AppConfig:
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
 
-    database_url: str = "sqlite:///./data/study_assistant.db"
+    database_url: str = f"sqlite:///{_DEFAULT_DB}"
     agent_max_steps: int = 5
     agent_timeout: int = 300
     retrieval_top_k: int = 5
@@ -95,7 +99,7 @@ class AppConfig:
         self.search.api = os.getenv("SEARCH_API", "tavily")
         self.search.api_key = os.getenv("SEARCH_API_KEY")
 
-        self.database_url = os.getenv("DATABASE_URL", "sqlite:///./data/study_assistant.db")
+        self.database_url = os.getenv("DATABASE_URL", "") or f"sqlite:///{_DEFAULT_DB}"
         self.host = os.getenv("APP_HOST", "127.0.0.1")
         self.port = int(os.getenv("APP_PORT", "8000"))
         self.debug = os.getenv("DEBUG", "false").lower() == "true"

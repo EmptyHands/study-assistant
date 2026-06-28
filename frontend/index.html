@@ -3,86 +3,92 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Study Assistant</title>
+<title>学习助手 · Study Assistant</title>
 <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 
+<!-- === 侧边栏 - 笔记本封面 === -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <div class="logo-icon">&#x25C8;</div>
-    <h2>Study Assistant</h2>
-    <p>AI-Powered Learning</p>
+    <div class="logo-icon">&#x1F4D4;</div>
+    <h2>学习助手</h2>
+    <p>亲手写下理解</p>
   </div>
   <div class="sidebar-actions">
     <button class="btn-new-project" id="btnNewProject">
-      <span class="plus">+</span> New Project
+      <span class="plus">+</span> 新建项目
     </button>
   </div>
   <nav class="project-list" id="projectList">
-    <div class="project-list-empty">No projects yet.<br>Click + to import one.</div>
+    <div class="project-list-empty">还没有项目<br>点击 + 导入一个吧</div>
   </nav>
   <div class="sidebar-footer">
     <span class="status-dot-live"></span>
-    <span id="connectionStatus">Ready</span>
+    <span id="connectionStatus">就绪</span>
   </div>
 </aside>
 
+<!-- === 主区域 - 笔记本内页 === -->
 <main class="main-area">
   <header class="topbar">
-    <h1 id="projectTitle">Welcome</h1>
+    <h1 id="projectTitle">欢迎回来</h1>
     <div class="topbar-right">
       <span class="update-nudge" id="updateNudge" style="display:none;"></span>
-      <button class="btn-update" id="btnUpdate" disabled>&#8635; Update</button>
+      <button class="btn-update" id="btnUpdate" disabled>&#8635; 更新</button>
     </div>
   </header>
 
   <nav class="tab-bar">
-    <button class="tab active" data-tab="content"><span class="tab-icon">&#x1F4D6;</span> Content</button>
-    <button class="tab" data-tab="qa"><span class="tab-icon">&#x1F4AC;</span> Q&A</button>
-    <button class="tab" data-tab="feynman"><span class="tab-icon">&#x1F9E0;</span> Feynman</button>
-    <button class="tab" data-tab="logs"><span class="tab-icon">&#x1F4C8;</span> Log</button>
+    <button class="tab active" data-tab="content"><span class="tab-icon">&#x1F4D6;</span> 学习内容</button>
+    <button class="tab" data-tab="qa"><span class="tab-icon">&#x1F4AC;</span> 提问</button>
+    <button class="tab" data-tab="feynman"><span class="tab-icon">&#x1F9E0;</span> 费曼学习</button>
+    <button class="tab" data-tab="logs"><span class="tab-icon">&#x1F4DD;</span> 学习日志</button>
   </nav>
 
   <div class="content-area" id="contentArea">
     <div class="welcome-state">
-      <div class="welcome-icon">&#x25C8;</div>
-      <h2>Welcome to Study Assistant</h2>
-      <p>Import a PDF, Git repository, or type a concept to begin.</p>
+      <div class="welcome-icon">&#x1F4DA;</div>
+      <h2>欢迎使用学习助手</h2>
+      <p>导入 PDF、Git 仓库，或者写下一个概念，开始你的学习之旅吧。</p>
+      <div class="quick-actions">
+        <button class="quick-action" id="btnQuickImport">&#x1F4E5; 导入学习资料</button>
+      </div>
     </div>
   </div>
 </main>
 
+<!-- === 导入弹窗 - 撕裂纸片风格 === -->
 <div class="modal-overlay" id="importModal">
   <div class="modal-card">
     <div class="modal-header">
-      <h3>Import Learning Project</h3>
+      <h3>导入学习项目</h3>
       <button class="modal-close" id="btnModalClose">&times;</button>
     </div>
     <div class="modal-tabs">
-      <button class="modal-tab active" data-mtab="file">&#x1F4C1; File</button>
-      <button class="modal-tab" data-mtab="git">&#x1F5C4; Git</button>
-      <button class="modal-tab" data-mtab="concept">&#x1F4A1; Concept</button>
+      <button class="modal-tab active" data-mtab="file">&#x1F4C1; 文件</button>
+      <button class="modal-tab" data-mtab="git">&#x1F5C4; Git仓库</button>
+      <button class="modal-tab" data-mtab="concept">&#x1F4A1; 概念</button>
     </div>
     <div class="modal-panel active" id="panel-file">
-      <div class="field"><label>Project Name <small>(optional)</small></label><input type="text" id="fileName" placeholder="Uses filename if empty"></div>
-      <div class="drop-zone" id="dropZone"><div class="drop-icon">&#x1F4E4;</div><p>Click or drag file here</p><small>PDF, DOCX, TXT, images, code</small></div>
+      <div class="field"><label>项目名称 <small>（可选，默认使用文件名）</small></label><input type="text" id="fileName" placeholder="给项目起个名字..."></div>
+      <div class="drop-zone" id="dropZone"><div class="drop-icon">&#x1F4E4;</div><p>点击或拖拽文件到这里</p><small>支持 PDF、DOCX、TXT、图片、代码文件</small></div>
       <input type="file" id="fileInput" hidden>
     </div>
     <div class="modal-panel" id="panel-git">
-      <div class="field"><label>Repository URL</label><input type="text" id="gitUrl" placeholder="https://github.com/user/repo.git"></div>
-      <div class="field"><label>Project Name <small>(optional)</small></label><input type="text" id="gitName" placeholder="Auto-detected"></div>
+      <div class="field"><label>仓库地址</label><input type="text" id="gitUrl" placeholder="https://github.com/user/repo.git"></div>
+      <div class="field"><label>项目名称 <small>（可选）</small></label><input type="text" id="gitName" placeholder="自动识别仓库名"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="btnCancelGit">Cancel</button>
-        <button class="btn-primary" id="btnImportGit">Import</button>
+        <button class="btn-cancel" id="btnCancelGit">取消</button>
+        <button class="btn-primary" id="btnImportGit">导入</button>
       </div>
     </div>
     <div class="modal-panel" id="panel-concept">
-      <div class="field"><label>Topic / Concept</label><textarea id="conceptText" rows="4" placeholder="Describe a concept to learn..."></textarea></div>
-      <div class="field"><label>Project Name <small>(optional)</small></label><input type="text" id="conceptName" placeholder="Auto-generated"></div>
+      <div class="field"><label>主题 / 概念</label><textarea id="conceptText" rows="4" placeholder="描述你想学习的概念..."></textarea></div>
+      <div class="field"><label>项目名称 <small>（可选）</small></label><input type="text" id="conceptName" placeholder="自动生成"></div>
       <div class="modal-actions">
-        <button class="btn-cancel" id="btnCancelConcept">Cancel</button>
-        <button class="btn-primary" id="btnImportConcept">Import</button>
+        <button class="btn-cancel" id="btnCancelConcept">取消</button>
+        <button class="btn-primary" id="btnImportConcept">导入</button>
       </div>
     </div>
   </div>
