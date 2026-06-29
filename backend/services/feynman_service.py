@@ -97,9 +97,13 @@ async def submit_answer(session_id: str, answer: str, confused: bool = False) ->
             correction = evaluation.get("correction", "")
             follow_up = evaluation.get("follow_up_action", "next_question")
         else:
-            evaluation = {"understanding_level": "poor", "correction": "没关系！让我们一起来理解这个问题。", "follow_up_action": "clarify"}
+            explanation_result = await agent.explain_question({
+                "title": title,
+                "question": last.get("question", ""),
+            })
+            correction = explanation_result.get("explanation", "没关系！让我们一起来理解这个问题。")
+            evaluation = {"understanding_level": "poor", "correction": correction, "follow_up_action": "clarify"}
             last["evaluation"] = evaluation
-            correction = "没关系！让我们一起来理解这个问题。"
             follow_up = "clarify"
 
         # 生成下一个问题

@@ -5,14 +5,14 @@ from .base import BaseAgent
 
 logger = logging.getLogger(__name__)
 
-QUESTION_GEN_PROMPT = """You are using the Feynman learning method. Act as a curious student who knows nothing about this topic but wants to learn."学生"。
+QUESTION_GEN_PROMPT = """你正在使用费曼学习法。扮演一个对这个主题一无所知但渴望学习的好奇学生。
 
 你需要向用户（作为"老师"）提出一个问题。规则:
-1. Start from the basics and go deeper
-2. Use simple, curious language
+1. 从基础开始，逐步深入
+2. 使用简单、好奇的语言
 3. 不要问过于宽泛的问题（如"这个主题是什么"），要具体
-4. Follow up on unclear answers from history
-5. If user was confused before, help them first
+4. 针对历史记录中不清楚的回答进行追问
+5. 如果用户之前表现出困惑，先帮助ta理解
 
 主题信息:
 标题: {title}
@@ -24,12 +24,12 @@ QUESTION_GEN_PROMPT = """You are using the Feynman learning method. Act as a cur
 请按以下 JSON 格式返回（不要包含其他内容）:
 {{
   "question": "你的问题",
-  "question_type": "basic/deep/comparison/application", 
+  "question_type": "basic/deep/comparison/application",
   "focus": "这个问题关注的知识点",
   "hint": "一个简短的提示（可选，帮助用户思考）"
 }}"""
 
-EVALUATE_ANSWER_PROMPT = """You are a learning evaluator. The user is trying to explain a concept.
+EVALUATE_ANSWER_PROMPT = """你是一个学习评估专家。用户正在尝试解释一个概念。
 
 主题: {title}
 当前问题: {question}
@@ -43,6 +43,20 @@ EVALUATE_ANSWER_PROMPT = """You are a learning evaluator. The user is trying to 
   "correction": "需要纠正的内容（如果有），使用友好、鼓励的语气",
   "follow_up_action": "next_question/probe_deeper/clarify"
 }}"""
+
+
+EXPLAIN_QUESTION_PROMPT = """你是一个友善、耐心的老师。学生对你提出的问题感到困惑，不确定如何回答。
+
+主题: {title}
+学生困惑的问题: {question}
+
+请用简单易懂的语言解释这个问题：
+1. 把问题拆解成更简单的部分
+2. 用通俗的比喻或例子帮助理解
+3. 解释这个问题考察的关键概念是什么
+4. 保持鼓励的语气，让学生感到安心
+
+请用自然段落回复（不要用JSON），保持友好、鼓励的语气。回复不要过长，3-5句话即可。"""
 
 
 class FeynmanAgent(BaseAgent):
@@ -97,6 +111,23 @@ class FeynmanAgent(BaseAgent):
                 "follow_up_action": "next_question",
             }
 
+    async def explain_question(self, context: dict) -> dict:
+        """当用户表示困惑时，用简单语言解释当前问题"""
+        question = context.get("question", "").strip()
+        if not question:
+            return {"explanation": "没关系！让我们一起来理解这个问题。"}
+
+        prompt = EXPLAIN_QUESTION_PROMPT.replace(
+            "{title}", context.get("title", "")
+        ).replace("{question}", question)
+
+        try:
+            explanation = await self.think(prompt, system_prompt="你是一个友善、耐心的老师。")
+            return {"explanation": explanation.strip()}
+        except Exception as e:
+            logger.error(f"解释问题失败: {e}")
+            return {"explanation": "没关系！让我们一起来理解这个问题。"}
+
     async def summarize_session(self, session_data: list) -> dict:
         """总结费曼学习会话，提取薄弱点"""
         if not session_data:
@@ -137,4 +168,6 @@ class FeynmanAgent(BaseAgent):
             return await self.evaluate_answer(input_data.get("context", {}))
         elif action == "summarize":
             return await self.summarize_session(input_data.get("session_data", []))
+        elif action == "explain_question":
+            return await self.explain_question(input_data.get("context", {}))
         return {"error": "未知操作"}

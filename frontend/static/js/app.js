@@ -66,8 +66,11 @@ function renderProjectList() {
 
 function selectProject(id) {
   return fetch(API_BASE + "/projects/" + id).then(function(r) { return r.json(); }).then(function(d) {
-    APP.currentProject = d.project; renderProjectList(); renderTopBar();
+    APP.currentProject = d.project;
+    APP.feynmanSessionId = null; APP.feynmanRound = 0; APP.feynmanSaved = null;
+    renderProjectList(); renderTopBar();
     checkUpdateStatus();
+    switchTab(APP.currentTab);
   }).catch(function(e) { toast("加载项目失败", "error"); });
 }
 

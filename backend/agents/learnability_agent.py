@@ -4,15 +4,15 @@ from .base import BaseAgent
 
 logger = logging.getLogger(__name__)
 
-LEARNABILITY_PROMPT = """You are a learning material evaluation expert. Determine if the following content is suitable as a learning project.
+LEARNABILITY_PROMPT = """你是一个学习材料评估专家。请判断以下内容是否适合作为学习项目。
 
-Learnable: tutorials, textbooks, academic papers, structured code projects, flowcharts, knowledge systems, concepts with clear structure.
-Not learnable: scenic photos, receipts/invoices, raw data spreadsheets, awesome-list repos, cache/temp files, advertisements, disorganized notes.
+适合学习: 教程、教材、学术论文、结构化代码项目、流程图、知识体系、具有清晰结构的概念。
+不适合学习: 风景照片、收据/发票、原始数据表格、awesome-list仓库、缓存/临时文件、广告、杂乱无章的笔记。
 
-Return ONLY valid JSON (no markdown, no extra text):
-{"is_learnable": true, "reason": "brief reason", "content_type": "type", "title": "suggested title"}
+只返回合法的JSON（不要markdown，不要额外文字）:
+{{"is_learnable": true, "reason": "简要说明", "content_type": "类型", "title": "建议的标题"}}
 
-Content:
+内容:
 {content}"""
 
 
@@ -27,7 +27,7 @@ class LearnabilityAgent(BaseAgent):
         truncated = content[:8000] if len(content) > 8000 else content
         prompt = LEARNABILITY_PROMPT.replace("{content}", truncated)
         try:
-            response = await self.think(prompt, system_prompt="You are a learning material evaluator. Return ONLY valid JSON.")
+            response = await self.think(prompt, system_prompt="你是一个学习材料评估专家。只返回合法的JSON。")
             result = self.safe_json(response, {"is_learnable": False, "reason": "parse failed", "content_type": "", "title": ""})
             return {
                 "is_learnable": result.get("is_learnable", False),
