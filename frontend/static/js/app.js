@@ -16,7 +16,6 @@ var APP = { projects: [], currentProject: null, currentTab: "content", feynmanSe
 document.addEventListener("DOMContentLoaded", function() {
   loadProjects();
   document.getElementById("btnNewProject").addEventListener("click", showImportModal);
-  document.getElementById("btnUpdate").addEventListener("click", handleUpdate);
   document.getElementById("btnModalClose").addEventListener("click", closeImportModal);
   document.getElementById("btnCancelGit").addEventListener("click", closeImportModal);
   document.getElementById("btnCancelConcept").addEventListener("click", closeImportModal);
@@ -69,7 +68,7 @@ function selectProject(id) {
     APP.currentProject = d.project;
     APP.feynmanSessionId = null; APP.feynmanRound = 0; APP.feynmanSaved = null;
     renderProjectList(); renderTopBar();
-    checkUpdateStatus();
+    autoFirstLog();
     switchTab(APP.currentTab);
   }).catch(function(e) { toast("加载项目失败", "error"); });
 }
@@ -162,22 +161,28 @@ function startLearning(projectId) { debugLog("learn", "startLearning 被调用�
     .catch(function(e) { clearInterval(poll); toast("学习流程失败: " + e.message, "error"); showWelcome(); });
 }
 
-function handleUpdate() {
+function autoFirstLog() {
   if (!APP.currentProject) return;
-  var btn = document.getElementById("btnUpdate"); btn.disabled = true; btn.textContent = "更新中...";
-  fetch(API_BASE + "/learning/" + APP.currentProject.id + "/update", { method: "POST" })
+  fetch(API_BASE + "/logs/" + APP.currentProject.id + "/first-record", { method: "POST" })
     .then(function(r) { return r.json(); })
-    .then(function(d) { toast(d.needs_update ? "已更新" : "已是最新", "success"); return selectProject(APP.currentProject.id); })
-    .then(function() { switchTab("content"); }).catch(function() {})
-    .finally(function() { btn.disabled = false; btn.textContent = "\u{21BB} 更新"; });
+    .then(function(d) { if (d.log) debugLog("first-log", "首次学习已记录"); })
+    .catch(function() {});
 }
 
-function checkUpdateStatus() {
+function recordAndUpdate() {
   if (!APP.currentProject) return;
-  fetch(API_BASE + "/logs/" + APP.currentProject.id + "/check-update").then(function(r) { return r.json(); }).then(function(d) {
-    var n = document.getElementById("updateNudge");
-    if (d.update_needed) { n.textContent = "⚠ " + d.reason; n.style.display = "flex"; } else { n.style.display = "none"; }
-  }).catch(function() {});
+  var btn = document.getElementById("btnRecordUpdate");
+  if (btn) { btn.disabled = true; btn.textContent = "记录中..."; }
+  fetch(API_BASE + "/logs/" + APP.currentProject.id + "/record", { method: "POST" })
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      toast(d.message || "学习记录已更新", "success");
+      if (btn) { btn.disabled = false; btn.textContent = "📝 记录并更新"; }
+      if (APP.currentTab === "logs") renderLogs();
+    })
+    .catch(function() {
+      if (btn) { btn.disabled = false; btn.textContent = "📝 记录并更新"; }
+    });
 }
 
 function setupTabs() { document.querySelectorAll(".tab").forEach(function(btn) { btn.addEventListener("click", function() { switchTab(btn.dataset.tab); }); }); }
@@ -192,7 +197,6 @@ function switchTab(tab) { debugLog("tab", "switchTab(" + tab + "), 当前项目=
 
 function renderTopBar() {
   document.getElementById("projectTitle").textContent = APP.currentProject ? APP.currentProject.name : "欢迎回来";
-  document.getElementById("btnUpdate").disabled = !APP.currentProject;
 }
 
 function showWelcome() {
@@ -250,8 +254,9 @@ function renderFramework(nodes) {
 function renderQA() {
   document.getElementById("contentArea").innerHTML =
     "<div class=\"chat-container\"><div class=\"chat-messages\" id=\"qaMessages\"><div class=\"empty-state\"><h3>提出问题</h3><p>关于这个项目，你有什么想问的？</p></div></div>" +
-    "<div class=\"chat-input-row\"><input type=\"text\" id=\"qaInput\" placeholder=\"输入你的问题...\"><button id=\"qaSendBtn\">发送</button></div></div>";
+    "<div class=\"chat-input-row\"><input type=\"text\" id=\"qaInput\" placeholder=\"输入你的问题...\"><button id=\"qaSendBtn\">发送</button><button id=\"btnRecordUpdate\" class=\"btn-record\">📝 记录并更新</button></div></div>";
   document.getElementById("qaSendBtn").addEventListener("click", askQuestion);
+  document.getElementById("btnRecordUpdate").addEventListener("click", recordAndUpdate);
   var inp = document.getElementById("qaInput"); if (inp) inp.addEventListener("keydown", function(e) { if (e.key === "Enter") askQuestion(); });
   loadQAHistory();
 }
@@ -288,11 +293,12 @@ function startFeynman() {
 }
 function buildFeynmanUI(question, hint) {
   return "<div class=\"feynman-turn ai\"><div class=\"feynman-avatar\">?</div><div class=\"feynman-bubble\"><strong>学生（第 " + APP.feynmanRound + " 轮）：</strong><br>" + esc(question) + (hint ? "<br><small style=\"color:var(--ink-faded);\">提示: " + esc(hint) + "</small>" : "") + "</div></div>" +
-    "<div id=\"feynmanEval\"></div><div class=\"feynman-input-row\"><input type=\"text\" id=\"feynmanInput\" placeholder=\"用你自己的话解释...\"><button class=\"btn-primary\" id=\"btnFAnswer\">回答</button><button class=\"btn-cancel btn-confused\" id=\"btnFConfused\">我不太确定</button></div>";
+    "<div id=\"feynmanEval\"></div><div class=\"feynman-input-row\"><input type=\"text\" id=\"feynmanInput\" placeholder=\"用你自己的话解释...\"><button class=\"btn-primary\" id=\"btnFAnswer\">回答</button><button class=\"btn-cancel btn-confused\" id=\"btnFConfused\">我不太确定</button><button id=\"btnRecordUpdate\" class=\"btn-record\">📝 记录并更新</button></div>";
 }
 function bindFeynmanButtons() {
   var ba = document.getElementById("btnFAnswer"), bc = document.getElementById("btnFConfused");
   if (ba) ba.addEventListener("click", submitFeynmanAnswer); if (bc) bc.addEventListener("click", submitFeynmanConfused);
+  var br = document.getElementById("btnRecordUpdate"); if (br) br.addEventListener("click", recordAndUpdate);
   var fi = document.getElementById("feynmanInput"); if (fi) fi.addEventListener("keydown", function(e) { if (e.key === "Enter") submitFeynmanAnswer(); });
 }
 function removeOldFeynmanUI() {
@@ -321,7 +327,7 @@ function sendFeynmanAnswer(answer, confused) {
       var loading = document.getElementById("feynmanLoading"); if (loading) loading.remove();
       if (d.session_completed) {
         document.getElementById("feynmanStage").innerHTML += "<div class=\"evaluation-card\"><h3 style=\"font-family:var(--font-title);margin-bottom:8px;\">学习完成！</h3><p>" + esc(d.overall_assessment || "") + "</p>" + (d.weak_points || []).map(function(w) { return "<p class=\"eval-weak\">\u{25CF} " + esc(w) + "</p>"; }).join("") + "</div>";
-        APP.feynmanSessionId = null; APP.feynmanSaved = null; generateLog();
+        APP.feynmanSessionId = null; APP.feynmanSaved = null; recordAndUpdate();
       } else {
         removeOldFeynmanUI();
         if (d.correction) { document.getElementById("feynmanStage").innerHTML += "<div class=\"evaluation-card\"><p><strong>反馈:</strong> " + esc(d.correction) + "</p></div>"; }
@@ -337,14 +343,10 @@ function renderLogs() {
   if (!APP.currentProject) return;
   document.getElementById("contentArea").innerHTML = "<div class=\"loading-state\"><div class=\"spinner\"></div></div>";
   fetch(API_BASE + "/logs/" + APP.currentProject.id).then(function(r) { return r.json(); }).then(function(d) {
-    if (!d.logs || d.logs.length === 0) { document.getElementById("contentArea").innerHTML = "<div class=\"empty-state\"><h3>暂无日志</h3><p>完成问答或费曼学习后会生成日志。</p></div>"; return; }
-    var html = "<div class=\"log-timeline\">" + d.logs.map(function(l) { return "<div class=\"log-entry\"><div class=\"log-date\">" + esc(l.log_date || "") + " | " + (l.session_count || 0) + " 次学习</div>" + (l.knowledge_summary ? "<div class=\"log-block\"><h4>掌握知识点</h4><div class=\"md-content\">" + simpleMD(l.knowledge_summary) + "</div></div>" : "") + (l.weak_points ? "<div class=\"log-block\"><h4>薄弱环节</h4><div class=\"md-content\">" + simpleMD(l.weak_points) + "</div></div>" : "") + "</div>"; }).join("") + "</div><button class=\"btn-primary\" id=\"btnGenLog\" style=\"margin-top:16px;\">生成日志</button>";
-    document.getElementById("contentArea").innerHTML = html; document.getElementById("btnGenLog").addEventListener("click", generateLog);
+    if (!d.logs || d.logs.length === 0) { document.getElementById("contentArea").innerHTML = "<div class=\"empty-state\"><h3>暂无日志</h3><p>首次加载学习内容时会自动记录，也可以在提问或费曼学习中使用「记录并更新」按钮来保存。</p></div>"; return; }
+    var html = "<div class=\"log-timeline\">" + d.logs.map(function(l) { return "<div class=\"log-entry\"><div class=\"log-date\">" + esc(l.log_date || "") + " | " + (l.session_count || 0) + " 次学习</div>" + (l.knowledge_summary ? "<div class=\"log-block\"><h4>学习记录</h4><div class=\"md-content\">" + simpleMD(l.knowledge_summary) + "</div></div>" : "") + (l.weak_points ? "<div class=\"log-block\"><h4>薄弱环节</h4><div class=\"md-content\">" + simpleMD(l.weak_points) + "</div></div>" : "") + "</div>"; }).join("") + "</div>";
+    document.getElementById("contentArea").innerHTML = html;
   }).catch(function() { document.getElementById("contentArea").innerHTML = "<div class=\"empty-state\"><p>加载日志失败</p></div>"; });
-}
-function generateLog() {
-  if (!APP.currentProject) return;
-  fetch(API_BASE + "/logs/" + APP.currentProject.id + "/generate", { method: "POST" }).then(function(r) { return r.json(); }).then(function(d) { toast(d.message || "日志已生成", "success"); if (APP.currentTab === "logs") renderLogs(); }).catch(function() {});
 }
 
 function esc(s) { if (!s) return ""; var d = document.createElement("div"); d.textContent = s; return d.innerHTML; }

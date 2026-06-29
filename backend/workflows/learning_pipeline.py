@@ -132,7 +132,10 @@ async def save_learning_content(state: LearningState) -> dict:
             vs = get_vector_store()
             await vs.add_documents(state["project_id"], chunks)
         except Exception as e:
-            logger.warning(f"向量存储失败（非致命）: {e}")
+            # C2: 向量存储失败时更新项目状态，让用户知道 RAG 不可用
+            logger.error(f"向量存储失败，RAG 检索将不可用: {e}")
+            if project:
+                project.status = "ready_no_vectors"
 
     except Exception as e:
         logger.error(f"保存学习内容失败: {e}")

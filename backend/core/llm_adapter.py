@@ -1,7 +1,7 @@
 """LLM 适配器 - 支持 OpenAI 兼容接口"""
 import logging
 import asyncio
-from typing import Optional
+from typing import Optional, AsyncGenerator
 from openai import AsyncOpenAI
 from .config import get_config
 
@@ -50,6 +50,34 @@ class LLMAdapter:
             raise
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
+            raise
+
+    async def astream(self, prompt: str, system_prompt: str = None, **kwargs) -> AsyncGenerator[str, None]:
+        """D3: 真正的 token 级流式输出"""
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        try:
+            stream = await asyncio.wait_for(
+                self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=messages,
+                    temperature=kwargs.get("temperature", self.temperature),
+                    max_tokens=kwargs.get("max_tokens", self.max_tokens or 8000),
+                    stream=True,
+                ),
+                timeout=self.timeout,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta
+                if delta.content:
+                    yield delta.content
+        except asyncio.TimeoutError:
+            logger.error("LLM stream timeout")
+            raise
+        except Exception as e:
+            logger.error(f"LLM stream failed: {e}")
             raise
 
     def invoke_sync(self, prompt: str, system_prompt: str = None, **kwargs) -> str:

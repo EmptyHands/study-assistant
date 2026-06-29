@@ -35,7 +35,8 @@ class LogAgent(BaseAgent):
         qa_records = context.get("qa_records", [])
         feynman_records = context.get("feynman_records", [])
 
-        qa_text = "\n".join([f"Q: {r.get('question', '')}\nA: {r.get('answer', '')[:300]}" for r in qa_records[-10:]])
+        # D1: 使用 Service 层传入的全部记录（不再二次截断）
+        qa_text = "\n".join([f"Q: {r.get('question', '')}\nA: {r.get('answer', '')[:300]}" for r in qa_records])
         feynman_text = json.dumps(feynman_records[-5:], ensure_ascii=False)
 
         if not qa_text and not feynman_records:
@@ -51,7 +52,6 @@ class LogAgent(BaseAgent):
         try:
             response = await self.think(prompt, system_prompt="你是一个学习分析专家。请只返回JSON。")
             return self.parse_json_response(response)
-            return {"knowledge_summary": "", "weak_points": "", "progress_rating": "beginner", "recommendations": []}
         except Exception as e:
             logger.error(f"生成日志摘要失败: {e}")
             return {"knowledge_summary": "", "weak_points": "", "progress_rating": "beginner", "recommendations": []}

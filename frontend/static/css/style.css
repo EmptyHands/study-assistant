@@ -754,6 +754,32 @@ body {
   transform: rotate(0.3deg);
 }
 
+.btn-record {
+  padding: 10px 16px;
+  background: var(--sticky-green);
+  color: var(--green-pen);
+  border: 2px solid #a0d0b0;
+  border-radius: var(--radius-sketchy-sm);
+  cursor: pointer;
+  font-family: var(--font-title);
+  font-size: .82rem;
+  transition: all .15s;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+
+.btn-record:hover {
+  background: #c8ecd8;
+  border-color: #70b888;
+  transform: rotate(0.3deg) scale(1.03);
+}
+
+.btn-record:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* === FEYNMAN STAGE === */
 .feynman-stage {
   max-width: 680px;

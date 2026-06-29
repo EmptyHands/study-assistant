@@ -2,9 +2,30 @@
 from fastapi import APIRouter, HTTPException
 from backend.services.log_service import (
     generate_daily_log, get_project_logs, get_latest_log, check_update_needed,
+    record_first_learning, record_learning_log,
 )
 
 router = APIRouter()
+
+
+@router.post("/{project_id}/first-record")
+async def first_record(project_id: str):
+    """首次加载学习摘要时自动记录"""
+    try:
+        result = record_first_learning(project_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{project_id}/record")
+async def record_log(project_id: str):
+    """根据对话上下文智能总结并记录学习日志"""
+    try:
+        result = await record_learning_log(project_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/{project_id}/generate")

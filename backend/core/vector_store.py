@@ -63,9 +63,17 @@ class VectorStore:
             existing = self.client.get_collection(self.collection_name)
             existing_dim = existing.config.params.vectors.size
             if existing_dim != dim:
-                logger.warning(f"Vector dim mismatch: existing={existing_dim}, new={dim}. Recreating collection.")
-                self.client.delete_collection(self.collection_name)
-                raise Exception("recreate")
+                # C1: 维度不匹配时显式报错，防止静默丢失全部向量数据
+                raise ValueError(
+                    f"嵌入向量维度不匹配: 已有 collection 为 {existing_dim}d, "
+                    f"当前模型 {self.embedding_model_name} 为 {dim}d。\n"
+                    f"请执行以下步骤完成迁移:\n"
+                    f"  1. 手动删除旧 collection: client.delete_collection('{self.collection_name}')\n"
+                    f"  2. 重启应用，将自动创建新 collection\n"
+                    f"  3. 重新导入所有学习项目以重建向量索引"
+                )
+        except ValueError:
+            raise
         except Exception:
             self.client.create_collection(
                 collection_name=self.collection_name,

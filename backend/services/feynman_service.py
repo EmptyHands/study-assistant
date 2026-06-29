@@ -88,10 +88,13 @@ async def submit_answer(session_id: str, answer: str, confused: bool = False) ->
 
         # 评估答案
         if not confused:
+            # B2: 传入除当前轮之外的历史，让评估能识别反复出现的薄弱点
+            prev_history = session_data[:-1] if len(session_data) > 1 else []
             evaluation = await agent.evaluate_answer({
                 "title": title,
                 "question": last.get("question", ""),
                 "answer": answer,
+                "history": prev_history,
             })
             last["evaluation"] = evaluation
             correction = evaluation.get("correction", "")

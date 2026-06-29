@@ -9,6 +9,115 @@ from backend.agents.log_agent import LogAgent
 logger = logging.getLogger(__name__)
 
 
+def record_first_learning(project_id: str) -> dict:
+    """首次加载学习摘要时自动记录"""
+    db = get_db_session()
+    try:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise NotFoundException(f"项目不存在: {project_id}")
+
+        existing = (
+            db.query(LearningLog)
+            .filter(LearningLog.project_id == project_id)
+            .first()
+        )
+        if existing:
+            return {"message": "已有学习记录", "log": None}
+
+        now = datetime.utcnow()
+        log_entry = LearningLog(
+            project_id=project_id,
+            log_date=date.today(),
+            knowledge_summary=f"## 第一次学习\n\n于 {now.strftime('%Y年%m月%d日 %H:%M')} 开始学习「{project.name}」项目。\n\n这是学习的起点，后续的提问和费曼练习将记录在此日志中。",
+            weak_points="",
+            session_count=1,
+        )
+        db.add(log_entry)
+        db.commit()
+        return {
+            "message": "首次学习已记录",
+            "log": {
+                "id": log_entry.id,
+                "log_date": str(log_entry.log_date),
+                "knowledge_summary": log_entry.knowledge_summary,
+                "weak_points": log_entry.weak_points,
+                "session_count": log_entry.session_count,
+            },
+        }
+    finally:
+        db.close()
+
+
+async def record_learning_log(project_id: str) -> dict:
+    """根据所有QA和费曼对话上下文，智能总结并记录学习日志"""
+    db = get_db_session()
+    try:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise NotFoundException(f"项目不存在: {project_id}")
+
+        content = db.query(LearningContent).filter(LearningContent.project_id == project_id).first()
+
+        qa_records = (
+            db.query(QARecord)
+            .filter(QARecord.project_id == project_id)
+            .order_by(QARecord.created_at.desc())
+            .limit(20)
+            .all()
+        )
+        qa_list = [{"question": r.question, "answer": r.answer[:300]} for r in reversed(qa_records)]
+
+        feynman_sessions = (
+            db.query(FeynmanSession)
+            .filter(FeynmanSession.project_id == project_id)
+            .order_by(FeynmanSession.created_at.desc())
+            .limit(5)
+            .all()
+        )
+        feynman_data = []
+        for fs in reversed(feynman_sessions):
+            feynman_data.extend(fs.session_data or [])
+
+        now = datetime.utcnow()
+        today = date.today()
+
+        agent = LogAgent()
+        summary = await agent.generate_log({
+            "title": content.title if content else project.name,
+            "qa_records": qa_list,
+            "feynman_records": feynman_data,
+            "current_time": now.strftime("%Y年%m月%d日 %H:%M"),
+        })
+
+        existing_log = (
+            db.query(LearningLog)
+            .filter(LearningLog.project_id == project_id, LearningLog.log_date == today)
+            .first()
+        )
+
+        session_count = len(qa_records) + len(feynman_sessions)
+        if existing_log:
+            existing_log.knowledge_summary = summary.get("knowledge_summary", "")
+            existing_log.weak_points = summary.get("weak_points", "")
+            existing_log.session_count = session_count
+            existing_log.created_at = now
+        else:
+            log_entry = LearningLog(
+                project_id=project_id,
+                log_date=today,
+                knowledge_summary=summary.get("knowledge_summary", ""),
+                weak_points=summary.get("weak_points", ""),
+                session_count=session_count,
+            )
+            db.add(log_entry)
+
+        db.commit()
+        return {"message": "学习记录已更新", "log": summary}
+    finally:
+        db.close()
+
+
 async def generate_daily_log(project_id: str) -> dict:
     """生成今日学习日志"""
     db = get_db_session()
@@ -20,7 +129,6 @@ async def generate_daily_log(project_id: str) -> dict:
         today = date.today()
         content = db.query(LearningContent).filter(LearningContent.project_id == project_id).first()
 
-        # 获取今天的问答记录
         qa_records = (
             db.query(QARecord)
             .filter(QARecord.project_id == project_id)
@@ -29,7 +137,6 @@ async def generate_daily_log(project_id: str) -> dict:
         )
         qa_list = [{"question": r.question, "answer": r.answer[:300]} for r in qa_records]
 
-        # 获取今天的费曼会话
         feynman_sessions = (
             db.query(FeynmanSession)
             .filter(FeynmanSession.project_id == project_id)
@@ -50,7 +157,6 @@ async def generate_daily_log(project_id: str) -> dict:
             "feynman_records": feynman_data,
         })
 
-        # 保存日志
         existing_log = (
             db.query(LearningLog)
             .filter(LearningLog.project_id == project_id, LearningLog.log_date == today)
