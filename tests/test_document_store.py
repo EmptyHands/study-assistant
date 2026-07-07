@@ -25,23 +25,26 @@ def sample_chunk_result():
 
 class TestDocumentStore:
 
-    def test_index_and_purge(self, sample_chunk_result):
+    @pytest.mark.asyncio
+    async def test_index_and_purge(self, sample_chunk_result):
         project_id = str(uuid.uuid4())
         store = get_document_store()
-        count = store.index(project_id, sample_chunk_result)
+        count = await store.index(project_id, sample_chunk_result)
         assert count == 2
         result = store.purge(project_id)
         assert result is True
 
-    def test_index_empty_result(self):
+    @pytest.mark.asyncio
+    async def test_index_empty_result(self):
         store = get_document_store()
-        count = store.index(str(uuid.uuid4()), ChunkResult())
+        count = await store.index(str(uuid.uuid4()), ChunkResult())
         assert count == 0
 
-    def test_touch_does_not_raise(self, sample_chunk_result):
+    @pytest.mark.asyncio
+    async def test_touch_does_not_raise(self, sample_chunk_result):
         project_id = str(uuid.uuid4())
         store = get_document_store()
-        store.index(project_id, sample_chunk_result)
+        await store.index(project_id, sample_chunk_result)
         store.touch(project_id)
         store.purge(project_id)
 

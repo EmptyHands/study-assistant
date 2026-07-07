@@ -1,5 +1,6 @@
 """父子块文档存储 — 编排 SQLite 父块 + Qdrant 子块向量"""
 import logging
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -20,7 +21,7 @@ class DocumentStore:
     def __init__(self):
         self.vector_store = get_vector_store()
 
-    def index(self, project_id: str, result: ChunkResult) -> int:
+    async def index(self, project_id: str, result: ChunkResult) -> int:
         """持久化父子块：父块入 SQLite，子块入 Qdrant。返回父块数。
 
         先删除该项目的旧存储，再写入新数据（幂等重建）。
@@ -64,19 +65,17 @@ class DocumentStore:
             db.close()
 
         # 3. 子块向量写入 Qdrant
-        self._index_children(project_id, result.children, parent_id_map)
+        await self._index_children(project_id, result.children, parent_id_map)
 
         return len(result.parents)
 
-    def _index_children(
+    async def _index_children(
         self,
         project_id: str,
         children: list,
         parent_id_map: dict,
     ):
         """将子块向量写入 Qdrant，携带 parent_id"""
-        import asyncio
-
         points = []
         for i, child in enumerate(children):
             if not child.text or not child.text.strip():
@@ -84,9 +83,7 @@ class DocumentStore:
             parent_id = parent_id_map.get(child.parent_index)
             if parent_id is None:
                 continue
-            embedding = asyncio.get_event_loop().run_until_complete(
-                self.vector_store.embed_text(child.text)
-            )
+            embedding = await self.vector_store.embed_text(child.text)
             point_id = self.vector_store.make_point_id(
                 f"{project_id}_p{child.parent_index}_c{i}_{child.text[:50]}"
             )
@@ -191,9 +188,11 @@ class DocumentStore:
             db.close()
 
         # 清理向量
-        import asyncio
         try:
-            asyncio.create_task(self.vector_store.delete_project(project_id))
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.vector_store.delete_project(project_id))
+        except RuntimeError:
+            asyncio.run(self.vector_store.delete_project(project_id))
         except Exception:
             pass
 

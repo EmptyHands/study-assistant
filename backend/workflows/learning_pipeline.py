@@ -134,7 +134,7 @@ async def save_learning_content(state: LearningState) -> dict:
             chunker = ParentChildChunker(parent_size=1500, child_size=300)
             chunk_result = chunker.chunk(raw)
             store = get_document_store()
-            store.index(state["project_id"], chunk_result)
+            await store.index(state["project_id"], chunk_result)
         except Exception as e:
             logger.error(f"父子块存储失败，RAG 检索将不可用: {e}")
             if project:
