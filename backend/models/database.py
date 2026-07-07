@@ -87,3 +87,16 @@ class LearningLog(Base):
     created_at = Column(DateTime, default=_now)
 
     project = relationship("Project", back_populates="learning_logs")
+
+
+class DocumentChunk(Base):
+    """父块持久化存储 — ParentDocumentRetriever 的文档层"""
+    __tablename__ = "document_chunks"
+
+    id = Column(String(36), primary_key=True, default=_uuid_str)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True)
+    chunk_index = Column(Integer, nullable=False)
+    parent_text = Column(Text, nullable=False)
+    child_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=_now)
+    last_accessed_at = Column(DateTime, default=_now)
