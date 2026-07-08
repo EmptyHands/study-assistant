@@ -78,6 +78,12 @@ class AppConfig:
     agent_timeout: int = 300
     retrieval_top_k: int = 5
 
+    # --- 两阶段检索 ---
+    coarse_top_k: int = 20
+    fine_top_k: int = 5
+    reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    reranker_cache_dir: str = "E:/models"
+
     def __post_init__(self):
         self.llm.provider = LLMProvider(os.getenv("LLM_PROVIDER", "openai"))
         self.llm.model_name = os.getenv("LLM_MODEL", "gpt-4o-mini")
@@ -106,6 +112,10 @@ class AppConfig:
         self.log_level = os.getenv("LOG_LEVEL", "INFO")
         self.agent_max_steps = int(os.getenv("AGENT_MAX_STEPS", "5"))
         self.agent_timeout = int(os.getenv("AGENT_TIMEOUT", "300"))
+        self.coarse_top_k = int(os.getenv("COARSE_TOP_K", "20"))
+        self.fine_top_k = int(os.getenv("FINE_TOP_K", "5"))
+        self.reranker_model = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
+        self.reranker_cache_dir = os.getenv("RERANKER_CACHE_DIR", "E:/models")
 
 
 _config: Optional[AppConfig] = None
