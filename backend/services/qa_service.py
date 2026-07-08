@@ -24,26 +24,12 @@ async def ask_question(project_id: str, question: str) -> dict:
             summary = json.dumps(content.sq3r_json or {}, ensure_ascii=False)
             raw_content = content.raw_content or ""
 
-        # B1: 获取最近 QA 历史，供 Agent 理解多轮对话上下文
-        recent_qa = (
-            db.query(QARecord)
-            .filter(QARecord.project_id == project_id)
-            .order_by(QARecord.created_at.desc())
-            .limit(5)
-            .all()
-        )
-        history = [
-            {"question": r.question, "answer": r.answer[:300]}
-            for r in reversed(recent_qa)
-        ]
-
         agent = QAAgent()
         result = await agent.run({
             "question": question,
             "project_id": project_id,
             "summary": summary,
             "raw_content": raw_content,
-            "history": history,
         })
 
         # 保存问答记录
