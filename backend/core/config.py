@@ -38,6 +38,17 @@ class LLMConfig:
 
 
 @dataclass
+class SummaryLLMConfig:
+    """摘要 LLM 独立配置 — 用于 BackgroundKnowledge 增量摘要"""
+    enabled: bool = True
+    provider: str = "ollama"
+    model_name: str = "qwen2.5:3b"
+    api_key: Optional[str] = None
+    base_url: str = "http://localhost:11434/v1"
+    timeout: int = 15
+
+
+@dataclass
 class EmbeddingConfig:
     provider: EmbeddingProvider = EmbeddingProvider.OPENAI
     model_name: str = "text-embedding-3-small"
@@ -72,6 +83,9 @@ class AppConfig:
     embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     qdrant: QdrantConfig = field(default_factory=QdrantConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
+
+    summary_llm: SummaryLLMConfig = field(default_factory=SummaryLLMConfig)
+    context_buffer_tokens: int = 4000
 
     database_url: str = f"sqlite:///{_DEFAULT_DB}"
     agent_max_steps: int = 5
@@ -116,6 +130,14 @@ class AppConfig:
         self.fine_top_k = int(os.getenv("FINE_TOP_K", "5"))
         self.reranker_model = os.getenv("RERANKER_MODEL", "BAAI/bge-reranker-v2-m3")
         self.reranker_cache_dir = os.getenv("RERANKER_CACHE_DIR", "E:/models")
+
+        self.summary_llm.enabled = os.getenv("SUMMARY_LLM_ENABLED", "true").lower() == "true"
+        self.summary_llm.provider = os.getenv("SUMMARY_LLM_PROVIDER", "ollama")
+        self.summary_llm.model_name = os.getenv("SUMMARY_LLM_MODEL", "qwen2.5:3b")
+        self.summary_llm.api_key = os.getenv("SUMMARY_LLM_API_KEY", "")
+        self.summary_llm.base_url = os.getenv("SUMMARY_LLM_BASE_URL", "http://localhost:11434/v1")
+        self.summary_llm.timeout = int(os.getenv("SUMMARY_LLM_TIMEOUT", "15"))
+        self.context_buffer_tokens = int(os.getenv("CONTEXT_BUFFER_TOKENS", "4000"))
 
 
 _config: Optional[AppConfig] = None
