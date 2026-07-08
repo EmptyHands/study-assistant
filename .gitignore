@@ -44,3 +44,7 @@ htmlcov/
 # Temp
 bash.exe.stackdump
 *.lnk
+
+# Claude
+.claude/
+docs/
