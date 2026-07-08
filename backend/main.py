@@ -28,7 +28,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Study Assistant...")
     init_database()
     logger.info("Database initialized")
+
+    from backend.core.scheduler import init_scheduler
+    scheduler = init_scheduler()
+
     yield
+
+    scheduler.shutdown()
     logger.info("Shutting down Study Assistant...")
 
 

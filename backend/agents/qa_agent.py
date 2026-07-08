@@ -1,7 +1,6 @@
 """问答 Agent - 并行多源检索 + 对话历史感知"""
 import logging
 from .base import BaseAgent
-from backend.core.vector_store import get_vector_store
 from backend.utils.web_search import web_search
 
 logger = logging.getLogger(__name__)
@@ -41,8 +40,9 @@ class QAAgent(BaseAgent):
         # 并行获取 RAG 和网络搜索结果
         rag_results = []
         try:
-            vs = get_vector_store()
-            rag_results = await vs.search(project_id, question, top_k=3)
+            from backend.core.document_store import get_document_store
+            store = get_document_store()
+            rag_results = await store.search(project_id, question, top_k=3)
         except Exception as e:
             logger.warning(f"RAG检索失败: {e}")
 
@@ -70,7 +70,7 @@ class QAAgent(BaseAgent):
             prompt_parts.append(f"## 原始内容\n{raw_content[:3000]}")
 
         if rag_results:
-            rag_text = "\n---\n".join([r.get("text", "")[:800] for r in rag_results])
+            rag_text = "\n---\n".join([r.get("parent_text", "")[:800] for r in rag_results])
             prompt_parts.append(f"## RAG检索结果\n{rag_text}")
 
         if web_results:
@@ -106,7 +106,6 @@ class QAAgent(BaseAgent):
     async def stream_answer(self, question: str, summary: str, project_id: str):
         """D3: 真正的 token 级流式 SSE 输出"""
         from backend.core.llm_adapter import get_llm
-        from backend.core.vector_store import get_vector_store
         from backend.utils.web_search import web_search
 
         yield {"type": "status", "text": "检索中..."}
@@ -114,8 +113,9 @@ class QAAgent(BaseAgent):
         # 并行获取 RAG 和网络搜索结果
         rag_results = []
         try:
-            vs = get_vector_store()
-            rag_results = await vs.search(project_id, question, top_k=3)
+            from backend.core.document_store import get_document_store
+            store = get_document_store()
+            rag_results = await store.search(project_id, question, top_k=3)
         except Exception as e:
             logger.warning(f"RAG检索失败: {e}")
 
@@ -144,7 +144,7 @@ class QAAgent(BaseAgent):
                 db.close()
 
         if rag_results:
-            rag_text = "\n---\n".join([r.get("text", "")[:800] for r in rag_results])
+            rag_text = "\n---\n".join([r.get("parent_text", "")[:800] for r in rag_results])
             prompt_parts.append(f"## RAG检索结果\n{rag_text}")
 
         if web_results:

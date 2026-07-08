@@ -128,7 +128,7 @@ class VectorStore:
             query_filter=Filter(must=[FieldCondition(key="project_id", match=MatchValue(value=project_id))]),
             limit=top_k, with_payload=True,
         )
-        return [{"score": r.score, "text": r.payload.get("text", ""), "project_id": r.payload.get("project_id", "")} for r in results]
+        return [{"score": r.score, "text": r.payload.get("text", ""), "project_id": r.payload.get("project_id", ""), "parent_id": r.payload.get("parent_id", "")} for r in results]
 
     async def delete_project(self, project_id: str):
         self.client.delete(
@@ -138,6 +138,14 @@ class VectorStore:
 
     def _point_id(self, text: str) -> str:
         return hashlib.md5(text.encode()).hexdigest()
+
+    async def embed_text(self, text: str) -> list[float]:
+        """公开的文本嵌入方法，供 DocumentStore 使用"""
+        return await self._embed(text)
+
+    def make_point_id(self, text: str) -> str:
+        """公开的 point ID 生成方法，供 DocumentStore 使用"""
+        return self._point_id(text)
 
     def close(self):
         self.client.close()

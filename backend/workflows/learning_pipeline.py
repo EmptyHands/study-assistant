@@ -125,15 +125,18 @@ async def save_learning_content(state: LearningState) -> dict:
             db.add(content)
         db.commit()
 
-        # 向量化存储
+        # 父子块向量化存储
         raw = state.get("raw_content", "")
-        chunks = _chunk_text(raw, chunk_size=1000, overlap=200)
         try:
-            vs = get_vector_store()
-            await vs.add_documents(state["project_id"], chunks)
+            from backend.utils.chunking import ParentChildChunker
+            from backend.core.document_store import get_document_store
+
+            chunker = ParentChildChunker(parent_size=1500, child_size=300)
+            chunk_result = chunker.chunk(raw)
+            store = get_document_store()
+            await store.index(state["project_id"], chunk_result)
         except Exception as e:
-            # C2: 向量存储失败时更新项目状态，让用户知道 RAG 不可用
-            logger.error(f"向量存储失败，RAG 检索将不可用: {e}")
+            logger.error(f"父子块存储失败，RAG 检索将不可用: {e}")
             if project:
                 project.status = "ready_no_vectors"
 
@@ -144,19 +147,6 @@ async def save_learning_content(state: LearningState) -> dict:
         db.close()
 
     return {}
-
-
-def _chunk_text(text: str, chunk_size: int = 1000, overlap: int = 200) -> list[str]:
-    """将长文本切分为重叠的块"""
-    if not text:
-        return []
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start = end - overlap
-    return chunks
 
 
 async def end_not_learnable(state: LearningState) -> dict:

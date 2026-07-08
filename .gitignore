@@ -26,6 +26,7 @@ env/
 Thumbs.db
 
 # Data (runtime)
+data/
 data/projects/
 data/logs/
 *.db
@@ -38,3 +39,8 @@ qdrant_storage/
 .pytest_cache/
 .coverage
 htmlcov/
+.ruff_cache/
+
+# Temp
+bash.exe.stackdump
+*.lnk

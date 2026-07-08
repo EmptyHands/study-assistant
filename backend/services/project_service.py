@@ -96,6 +96,13 @@ def delete_project(project_id: str) -> bool:
         except Exception:
             pass
 
+        # 清理父子块存储
+        try:
+            from backend.core.document_store import get_document_store
+            get_document_store().purge(project_id)
+        except Exception:
+            pass
+
         return True
     finally:
         db.close()
@@ -131,6 +138,23 @@ def get_project_with_content(project_id: str) -> dict:
         return result
     finally:
         db.close()
+
+
+def purge_project_storage(project_id: str) -> dict:
+    """手动清除项目存储（内部测试用）。不影响项目记录本身。"""
+    from backend.core.document_store import get_document_store
+
+    db = get_db_session()
+    try:
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if not project:
+            raise NotFoundException(f"项目不存在: {project_id}")
+    finally:
+        db.close()
+
+    store = get_document_store()
+    store.purge(project_id)
+    return {"project_id": project_id, "purged": True}
 
 
 def _project_to_dict(p: Project) -> dict:
