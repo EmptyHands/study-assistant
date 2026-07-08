@@ -37,12 +37,12 @@ class QAAgent(BaseAgent):
         if not question.strip():
             return {"answer": "请提供问题。", "source_type": "none", "available_sources": []}
 
-        # 并行获取 RAG 和网络搜索结果
+        # 并行获取 RAG（两阶段检索）和网络搜索结果
         rag_results = []
         try:
-            from backend.core.document_store import get_document_store
-            store = get_document_store()
-            rag_results = await store.search(project_id, question, top_k=3)
+            from backend.core.retrieval import get_retrieval_pipeline
+            pipeline = get_retrieval_pipeline()
+            rag_results = await pipeline.retrieve(project_id, question)
         except Exception as e:
             logger.warning(f"RAG检索失败: {e}")
 
@@ -110,12 +110,12 @@ class QAAgent(BaseAgent):
 
         yield {"type": "status", "text": "检索中..."}
 
-        # 并行获取 RAG 和网络搜索结果
+        # 并行获取 RAG（两阶段检索）和网络搜索结果
         rag_results = []
         try:
-            from backend.core.document_store import get_document_store
-            store = get_document_store()
-            rag_results = await store.search(project_id, question, top_k=3)
+            from backend.core.retrieval import get_retrieval_pipeline
+            pipeline = get_retrieval_pipeline()
+            rag_results = await pipeline.retrieve(project_id, question)
         except Exception as e:
             logger.warning(f"RAG检索失败: {e}")
 
