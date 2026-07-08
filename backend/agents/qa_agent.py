@@ -32,7 +32,9 @@ class QAAgent(BaseAgent):
         project_id = input_data.get("project_id", "")
         summary = input_data.get("summary", "")  # 学习摘要
         raw_content = input_data.get("raw_content", "")
-        history = input_data.get("history", [])  # B1: 最近 QA 历史
+
+        from backend.utils.context import ConversationContext
+        ctx = ConversationContext(project_id)
 
         if not question.strip():
             return {"answer": "请提供问题。", "source_type": "none", "available_sources": []}
@@ -55,14 +57,14 @@ class QAAgent(BaseAgent):
         # 构建 prompt
         prompt_parts = [f"用户问题: {question}\n"]
 
-        # B1: 注入对话历史，让 LLM 理解追问和指代
-        if history:
+        # 注入活跃缓冲区中的最近对话
+        chat_history = ctx.build_chat_history()
+        if chat_history:
             history_lines = []
-            for h in history[-3:]:
-                history_lines.append(f"Q: {h.get('question', '')}")
-                history_lines.append(f"A: {h.get('answer', '')[:300]}")
-            if history_lines:
-                prompt_parts.append("## 对话历史\n" + "\n".join(history_lines))
+            for m in chat_history:
+                prefix = "Q" if m["role"] == "user" else "A"
+                history_lines.append(f"{prefix}: {m['content']}")
+            prompt_parts.append("## 最近对话\n" + "\n".join(history_lines))
 
         if summary:
             prompt_parts.append(f"## 学习摘要\n{summary[:3000]}")
@@ -91,7 +93,9 @@ class QAAgent(BaseAgent):
         source_type = "rag" if rag_results else ("web" if web_results else "summary")
 
         try:
-            answer = await self.think(prompt, system_prompt=QA_SYSTEM_PROMPT)
+            system_prompt = QA_SYSTEM_PROMPT + ctx.build_system_prompt_addition()
+            answer = await self.think(prompt, system_prompt=system_prompt)
+            ctx.add_turn(question, answer)
             return {
                 "answer": answer,
                 "source_type": source_type,
@@ -110,6 +114,9 @@ class QAAgent(BaseAgent):
 
         yield {"type": "status", "text": "检索中..."}
 
+        from backend.utils.context import ConversationContext
+        ctx = ConversationContext(project_id)
+
         # 并行获取 RAG（两阶段检索）和网络搜索结果
         rag_results = []
         try:
@@ -127,6 +134,14 @@ class QAAgent(BaseAgent):
 
         # 构建 prompt（与 run() 一致）
         prompt_parts = [f"用户问题: {question}\n"]
+
+        chat_history = ctx.build_chat_history()
+        if chat_history:
+            history_lines = []
+            for m in chat_history:
+                prefix = "Q" if m["role"] == "user" else "A"
+                history_lines.append(f"{prefix}: {m['content']}")
+            prompt_parts.append("## 最近对话\n" + "\n".join(history_lines))
 
         if summary:
             prompt_parts.append(f"## 学习摘要\n{summary[:3000]}")
@@ -167,13 +182,18 @@ class QAAgent(BaseAgent):
 
         # D3: 真正的 token 级流式输出
         llm = get_llm()
+        system_prompt = QA_SYSTEM_PROMPT + ctx.build_system_prompt_addition()
+        full_answer = ""
         try:
-            async for chunk in llm.astream(prompt, system_prompt=QA_SYSTEM_PROMPT):
+            async for chunk in llm.astream(prompt, system_prompt=system_prompt):
+                full_answer += chunk
                 yield {"type": "chunk", "text": chunk}
         except Exception as e:
             logger.error(f"流式生成失败: {e}")
             yield {"type": "error", "text": str(e)}
             return
+
+        ctx.add_turn(question, full_answer)
 
         yield {
             "type": "done",
