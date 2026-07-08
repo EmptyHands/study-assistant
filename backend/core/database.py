@@ -16,7 +16,7 @@ def init_database():
         connect_args["check_same_thread"] = False
     engine = create_engine(config.database_url, connect_args=connect_args, echo=config.debug)
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    from backend.models.database import Project, LearningContent, QARecord, FeynmanSession, LearningLog, DocumentChunk  # noqa
+    from backend.models.database import Project, LearningContent, QARecord, FeynmanSession, LearningLog, DocumentChunk, ProjectBackgroundKnowledge  # noqa
     Base.metadata.create_all(bind=engine)
 
 

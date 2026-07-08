@@ -100,3 +100,16 @@ class DocumentChunk(Base):
     child_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=_now)
     last_accessed_at = Column(DateTime, default=_now)
+
+
+class ProjectBackgroundKnowledge(Base):
+    """项目背景知识 — 对话历史摘要持久化"""
+    __tablename__ = "project_background_knowledge"
+
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"),
+                        primary_key=True, nullable=False)
+    user_intents = Column(Text, default="")
+    assistant_actions = Column(Text, default="")
+    key_facts = Column(Text, default="")
+    message_count = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=_now, onupdate=_now)
