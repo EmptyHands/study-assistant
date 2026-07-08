@@ -11,16 +11,21 @@ logger = logging.getLogger(__name__)
 class LLMAdapter:
     """LLM 抽象层"""
 
-    def __init__(self):
+    def __init__(self, model_name_override: str = None, base_url_override: str = None,
+                 api_key_override: str = None, temperature_override: float = None,
+                 max_tokens_override: int = None, timeout_override: int = None):
         config = get_config()
-        self.model_name = config.llm.model_name
-        self.temperature = config.llm.temperature
-        self.max_tokens = config.llm.max_tokens
-        self.timeout = config.llm.timeout
+        self.model_name = model_name_override or config.llm.model_name
+        self.temperature = temperature_override if temperature_override is not None else config.llm.temperature
+        self.max_tokens = max_tokens_override or config.llm.max_tokens
+        self.timeout = timeout_override or config.llm.timeout
+
+        api_key = api_key_override or config.llm.api_key
+        base_url = base_url_override or config.llm.base_url or "https://api.openai.com/v1"
 
         self.client = AsyncOpenAI(
-            api_key=config.llm.api_key,
-            base_url=config.llm.base_url or "https://api.openai.com/v1",
+            api_key=api_key,
+            base_url=base_url,
             timeout=float(self.timeout),
             max_retries=2,
         )
@@ -98,3 +103,35 @@ def get_llm() -> LLMAdapter:
     if _llm_adapter is None:
         _llm_adapter = LLMAdapter()
     return _llm_adapter
+
+
+_summary_llm: Optional[LLMAdapter] = None
+
+
+def get_summary_llm() -> Optional[LLMAdapter]:
+    """获取摘要专用 LLM 适配器（优先轻量模型，降级主 LLM）"""
+    global _summary_llm
+    if _summary_llm is not None:
+        return _summary_llm
+
+    config = get_config()
+    summary_cfg = config.summary_llm
+
+    if not summary_cfg.enabled:
+        return None
+
+    try:
+        _summary_llm = LLMAdapter(
+            model_name_override=summary_cfg.model_name,
+            base_url_override=summary_cfg.base_url,
+            api_key_override=summary_cfg.api_key or config.llm.api_key,
+            temperature_override=0.3,
+            max_tokens_override=1000,
+            timeout_override=summary_cfg.timeout,
+        )
+        logger.info(f"Summary LLM configured: {summary_cfg.model_name} via {summary_cfg.provider}")
+        return _summary_llm
+    except Exception as e:
+        logger.warning(f"Summary LLM unavailable ({e}), falling back to main LLM")
+        _summary_llm = get_llm()
+        return _summary_llm
